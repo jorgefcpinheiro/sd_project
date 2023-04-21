@@ -26,10 +26,35 @@ namespace client
             //receive a message from the server
             Console.WriteLine(receiveMessage(stream));
 
-            //send a message to the server
-            sendMessage(stream, "100 OK");
-
-            Console.ReadKey();
+            //handles the user input
+            while (true)
+            {
+                Console.WriteLine("Options:\n1- Send the file\n2- Show the coverages\n3- Exit");
+                Console.WriteLine("Option: "); 
+                string choice = Console.ReadLine() ?? "";
+                switch (choice)
+                {
+                    case "1":
+                        sendMessage(stream, "1");
+                        Console.WriteLine("File option");
+                        break;
+                    case "2":
+                        sendMessage(stream, "2");
+                        Console.WriteLine("Coverage option");
+                        break;
+                    case "3":
+                        sendMessage(stream, "3");
+                        Console.WriteLine("Exit option");
+                        client.Close();
+                        break;
+                    case "":
+                        Console.WriteLine("Invalid option");
+                        break;
+                    default:
+                        Console.WriteLine("Invalid option");
+                        break;
+                }
+            }
 
         }
 
