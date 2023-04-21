@@ -27,16 +27,12 @@ namespace server
                 //accepts the client
                 TcpClient client = server.AcceptTcpClient();
                 Console.WriteLine("Client connected at " + client.Client.RemoteEndPoint);
+                sendMessage(client.GetStream(), "100 OK");
+                //threads the client
+                Thread clientHandler = new Thread(new ParameterizedThreadStart(handleClient!));
 
-                //get the stream
-                NetworkStream stream = client.GetStream();
-
-                //send a message to the client
-                sendMessage(stream, "Hello " + client.Client.RemoteEndPoint);
-    
-                //receive a message from the client
-                Console.WriteLine(receiveMessage(stream));
-
+                //starts the thread
+                clientHandler.Start(client);
             }
         }
 
@@ -66,14 +62,15 @@ namespace server
             return message;
         }
 
-        //function to send a message to the server
-        static void sendMessageToServer(NetworkStream stream, string message)
+        static void handleClient(object obj)
         {
-            //convert the message to bytes
-            byte[] buffer = Encoding.ASCII.GetBytes(message);
-
-            //send the message to the server
-            stream.Write(buffer, 0, buffer.Length);
+            TcpClient client = (TcpClient)obj;
+            // Handle the client connection here
+            NetworkStream stream = client.GetStream();
+            while (true){
+                string choice = receiveMessage(stream);
+                Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") sent: " + choice);
+            }
         }
     }
 }
