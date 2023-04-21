@@ -68,8 +68,13 @@ namespace server
             // Handle the client connection here
             NetworkStream stream = client.GetStream();
             while (true){
-                string choice = receiveMessage(stream);
+                int choice = int.Parse(receiveMessage(stream));
                 Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") sent: " + choice);
+                if (choice == 3){
+                    Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") disconnected");
+                    client.Close();
+                    break;
+                }
             }
         }
     }
