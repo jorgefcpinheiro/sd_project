@@ -1,81 +1,92 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace server
+namespace TcpListenerExample
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             //ip and port information
-            IPAddress ip = IPAddress.Parse("127.0.0.1");
+            IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
             int port = 5000;
 
-            //create a new TcpListener 
-            TcpListener server = new TcpListener(ip, 5000);
+            //create a new TcpListener and start listening for client requests
+            TcpListener server = new TcpListener(ipAddress, port);
 
-            //start listening
+            //start listening for client requests
             server.Start();
-            Console.WriteLine("Server started at port " + port.ToString() + "...");
-            //handles all the clients that connect to the server
-            Console.WriteLine("Waiting for clients to connect...");
+            Console.WriteLine($"Server started at port " + port + "...");
+
+            //handles client requests asynchronously
             while (true)
             {
-                //accepts the client
-                TcpClient client = server.AcceptTcpClient();
-                Console.WriteLine("Client connected at " + client.Client.RemoteEndPoint);
-                sendMessage(client.GetStream(), "100 OK");
-                //threads the client
-                Thread clientHandler = new Thread(new ParameterizedThreadStart(handleClient!));
+                TcpClient client = await server.AcceptTcpClientAsync();
+                Console.WriteLine($"Client {client.Client.RemoteEndPoint} connected.");
+                await SendMessageAsync(client, "100 OK");
 
-                //starts the thread
-                clientHandler.Start(client);
+                //handle client in separate task
+                _ = HandleClientAsync(client);
             }
         }
 
-        //function to send a message to the client
-        static void sendMessage(NetworkStream stream, string message)
+        static async Task HandleClientAsync(TcpClient client)
         {
-            //convert the message to bytes
-            byte[] buffer = Encoding.ASCII.GetBytes(message);
+            try
+            {
+                //gets the reference to the network stream
+                NetworkStream stream = client.GetStream();
 
-            //send the message to the client
-            stream.Write(buffer, 0, buffer.Length);
+                while (true)
+                {
+                    int choice = int.Parse(await ReceiveMessageAsync(client));
+                    Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") sent: " + choice);
+                    if (choice == 3)
+                    {
+                        Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") disconnected");
+                        client.Close();
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error handling client {client.Client.RemoteEndPoint}: {ex.Message}");
+            }
+            finally
+            {
+                //closes the socket connection
+                client.Close();
+            }
         }
 
-        //function to receive a message from the client
-        static string receiveMessage(NetworkStream stream)
+        // Receive a message from the client asynchronously
+        private static async Task<string> ReceiveMessageAsync(TcpClient client)
         {
-            //create a buffer to store the message
+            // Get the network stream for the client
+            NetworkStream stream = client.GetStream();
+
+            // Read the message from the stream asynchronously
             byte[] buffer = new byte[1024];
+            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+            string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
 
-            //read the message from the client
-            stream.Read(buffer, 0, buffer.Length);
-
-            //convert the message to string
-            string message = Encoding.ASCII.GetString(buffer);
-
-            //return the message
+            // Return the message as a string
             return message;
         }
 
-        static void handleClient(object obj)
+        // Send a message to the client asynchronously
+        private static async Task SendMessageAsync(TcpClient client, string message)
         {
-            TcpClient client = (TcpClient)obj;
-            // Handle the client connection here
+            // Get the network stream for the client
             NetworkStream stream = client.GetStream();
-            while (true){
-                int choice = int.Parse(receiveMessage(stream));
-                Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") sent: " + choice);
-                if (choice == 3){
-                    Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") disconnected");
-                    client.Close();
-                    break;
-                }
-            }
+
+            // Convert the message to bytes and send it to the client asynchronously
+            byte[] buffer = Encoding.ASCII.GetBytes(message);
+            await stream.WriteAsync(buffer, 0, buffer.Length);
         }
     }
 }
