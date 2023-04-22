@@ -112,7 +112,7 @@ namespace server
             await SendMessageAsync(client, "File received");
 
 
-            Console.WriteLine($"File received and saved to files/{fileName}.txt");
+            Console.WriteLine($"File received and saved to files/{fileName}");
         }
     }
 }
