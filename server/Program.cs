@@ -44,6 +44,9 @@ namespace server
                 {
                     int choice = int.Parse(await ReceiveMessageAsync(client));
                     Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") sent: " + choice);
+                    if (choice == 1){
+                        await ReceiveFileAsync(client);
+                    }
                     if (choice == 3)
                     {
                         Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") disconnected");
@@ -87,6 +90,29 @@ namespace server
             // Convert the message to bytes and send it to the client asynchronously
             byte[] buffer = Encoding.ASCII.GetBytes(message);
             await stream.WriteAsync(buffer, 0, buffer.Length);
+        }
+
+        private static async Task ReceiveFileAsync(TcpClient client)
+        {
+            Console.WriteLine("Receiving file...");
+            string fileName = await ReceiveMessageAsync(client);
+            await SendMessageAsync(client, "File name received");
+            Console.WriteLine("File name: " + fileName);
+            string file = await ReceiveMessageAsync(client);
+
+            //Create a new directory to store the files if it doesn't exist
+            if (!Directory.Exists("./files"))
+            {
+                Directory.CreateDirectory("./files");
+            }
+
+
+            //save the data to a file in the current directory
+            File.WriteAllLines("files/" + fileName, new string[] { file });
+            await SendMessageAsync(client, "File received");
+
+
+            Console.WriteLine($"File received and saved to files/{fileName}.txt");
         }
     }
 }
