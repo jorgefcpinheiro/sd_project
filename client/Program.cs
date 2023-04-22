@@ -1,88 +1,97 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace client
+namespace TcpClientExample
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            IPAddress ip = IPAddress.Parse("127.0.0.1");
+            //ip and port information
+            IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
             int port = 5000;
+            try
+            {
+                //creates a new client and connects to the server
+                using TcpClient client = new TcpClient();
 
-            //create a new TcpClient
-            TcpClient client = new TcpClient();
+                await client.ConnectAsync(ipAddress, port);
+                Console.WriteLine("Connected to server");
 
-            //connect to the server
-            client.Connect(ip, port);
-            Console.WriteLine("Connected to server");
+                //get the stream
+                NetworkStream stream = client.GetStream();
 
-            //get the stream
+                //receive the "100 OK" message from the server
+                Console.WriteLine(await ReceiveMessageAsync(client));
+
+                //handles user input
+                while (true)
+                {
+                    Console.WriteLine("Options:\n1- Send the file\n2- Show the coverages\n3- Exit");
+                    Console.WriteLine("Option: ");
+                    string choice = Console.ReadLine() ?? "";
+                    switch (choice)
+                    {
+                        case "1":
+                            await SendMessageAsync(client, "1");
+                            Console.WriteLine("File option");
+                            break;
+                        case "2":
+                            await SendMessageAsync(client, "2");
+                            Console.WriteLine("Coverage option");
+                            break;
+                        case "3":
+                            await SendMessageAsync(client, "3");
+                            Console.WriteLine("Exit option");
+                            client.Close();
+                            break;
+                        case "":
+                            Console.WriteLine("Invalid option");
+                            break;
+                        default:
+                            Console.WriteLine("Invalid option");
+                            break;
+                    }
+                }
+                // Close the connection with the server
+                client.Close();
+                Console.WriteLine("Connection closed.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error connecting to server: {ex.Message}");
+            }
+        }
+
+        // Receive a message from the server asynchronously
+        private static async Task<string> ReceiveMessageAsync(TcpClient client)
+        {
+            // Get the network stream for the client
             NetworkStream stream = client.GetStream();
 
-            //receive a message from the server
-            Console.WriteLine(receiveMessage(stream));
-
-            //handles the user input
-            while (true)
-            {
-                Console.WriteLine("Options:\n1- Send the file\n2- Show the coverages\n3- Exit");
-                Console.WriteLine("Option: "); 
-                string choice = Console.ReadLine() ?? "";
-                switch (choice)
-                {
-                    case "1":
-                        sendMessage(stream, "1");
-                        Console.WriteLine("File option");
-                        break;
-                    case "2":
-                        sendMessage(stream, "2");
-                        Console.WriteLine("Coverage option");
-                        break;
-                    case "3":
-                        sendMessage(stream, "3");
-                        Console.WriteLine("Exit option");
-                        client.Close();
-                        break;
-                    case "":
-                        Console.WriteLine("Invalid option");
-                        break;
-                    default:
-                        Console.WriteLine("Invalid option");
-                        break;
-                }
-            }
-
-        }
-
-        //function to send a message to the server
-        static void sendMessage(NetworkStream stream, string message)
-        {
-            //convert the message to bytes
-            byte[] buffer = Encoding.ASCII.GetBytes(message);
-
-            //send the message to the server
-            stream.Write(buffer, 0, buffer.Length);
-        }
-
-        //funtion to receive a message from the server
-        static string receiveMessage(NetworkStream stream)
-        {
-            //create a buffer to store the message
+            // Read the message from the stream asynchronously
             byte[] buffer = new byte[1024];
+            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+            string message = Encoding.ASCII.GetString(buffer, 0, bytesRead);
 
-            //read the message from the server
-            stream.Read(buffer, 0, buffer.Length);
-
-            //convert the message to string
-            string message = Encoding.ASCII.GetString(buffer);
-
-            //return the message
+            // Return the message as a string
             return message;
         }
-    }
 
+        // Send a message to the server asynchronously
+        private static async Task SendMessageAsync(TcpClient client, string message)
+        {
+            // Get the network stream for the client
+            NetworkStream stream = client.GetStream();
+
+            // Convert the message to bytes and send it to the server asynchronously
+            byte[] buffer = Encoding.ASCII.GetBytes(message);
+            await stream.WriteAsync(buffer, 0, buffer.Length);
+        }
+
+
+    }
 }
