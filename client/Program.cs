@@ -37,7 +37,7 @@ namespace client
                     {
                         case "1":
                             await SendMessageAsync(client, "1");
-                            Console.WriteLine("File option");
+                            await SendFileAsync(client, "./files/example.txt");
                             break;
                         case "2":
                             await SendMessageAsync(client, "2");
@@ -56,7 +56,7 @@ namespace client
                             break;
                     }
                 }
-                // Close the connection with the server
+                //closes the connection
                 client.Close();
                 Console.WriteLine("Connection closed.");
             }
@@ -92,6 +92,21 @@ namespace client
             await stream.WriteAsync(buffer, 0, buffer.Length);
         }
 
+        private static async Task SendFileAsync(TcpClient client, string filePath)
+        {
+            //get the network stream for the client
+            NetworkStream stream = client.GetStream();
+            //read the file
+            byte[] fileData = File.ReadAllBytes(filePath);
+            //send the file name
+            string fileName = Path.GetFileName(filePath);
+            await SendMessageAsync(client, fileName);
+            Console.WriteLine(await ReceiveMessageAsync(client));
+            //send the file size
+            string fileSize = fileData.Length.ToString();
+            //send the file
+            await stream.WriteAsync(fileData, 0, fileData.Length);
 
+        }
     }
 }
