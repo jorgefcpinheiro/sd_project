@@ -36,22 +36,22 @@ namespace client
                     switch (choice)
                     {
                         case "1":
+                            Console.Clear();
                             await SendMessageAsync(client, "1");
                             await SendFileAsync(client, "./files/example.txt");
                             break;
                         case "2":
+                            Console.Clear();
                             await SendMessageAsync(client, "2");
-                            Console.WriteLine("Coverage option");
                             break;
                         case "3":
+                            Console.Clear();
                             await SendMessageAsync(client, "3");
-                            Console.WriteLine("Exit option");
+                            Console.WriteLine("Connection closed.");
                             client.Close();
                             break;
-                        case "":
-                            Console.WriteLine("Invalid option");
-                            break;
                         default:
+                            Console.Clear();
                             Console.WriteLine("Invalid option");
                             break;
                     }
