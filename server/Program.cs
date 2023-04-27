@@ -29,7 +29,7 @@ namespace server
                 await SendMessageAsync(client, "100 OK");
 
                 //handle client in separate task
-                _ = HandleClientAsync(client);
+                _ = Task.Run(() => HandleClientAsync(client));
             }
         }
 
