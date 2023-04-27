@@ -47,13 +47,15 @@ namespace client
                         case "3":
                             Console.Clear();
                             await SendMessageAsync(client, "3");
-                            Console.WriteLine("Connection closed.");
-                            client.Close();
                             break;
                         default:
                             Console.Clear();
                             Console.WriteLine("Invalid option");
                             break;
+                    }
+                    if (choice == "3")
+                    {
+                        break;
                     }
                 }
                 //closes the connection
