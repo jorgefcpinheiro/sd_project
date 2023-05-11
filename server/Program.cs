@@ -16,11 +16,6 @@ namespace server
             using SqlConnection connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
 
-            //creates a table called "coverages" with id,name and description columns
-            string sql = "CREATE IF NOT EXIST TABLE coverages (id INT IDENTITY(1,1) PRIMARY KEY, name VARCHAR(255), description VARCHAR(255))";
-            using SqlCommand command = new SqlCommand(sql, connection);
-            await command.ExecuteNonQueryAsync();
-                        
             //ip and port information
             IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
             int port = 5000;
@@ -40,14 +35,14 @@ namespace server
                 await SendMessageAsync(client, "100 OK");
 
                 //handle client in separate task
-                _ = Task.Run(() => HandleClientAsync(client));
+                _ = Task.Run(() => HandleClientAsync(client, connection));
 
                 //closes connection to the database
-                connection.Close();
+                //connection.Close();
             }
         }
 
-        static async Task HandleClientAsync(TcpClient client)
+        static async Task HandleClientAsync(TcpClient client, SqlConnection connection)
         {
             try
             {
@@ -64,15 +59,44 @@ namespace server
                     }
                     if (choice == 2)
                     {
-                        //Get the data from the table "coverage" in the database
-                        
+                        //Get the data from the table "coverages" and send it to the client
+                        string sql = "SELECT * FROM coverages";
+                        using SqlCommand command = new SqlCommand(sql, connection);
+                        using SqlDataReader reader = await command.ExecuteReaderAsync();
+                        string stringMaster = "";
+                        //counts the coverages from the different operators and stores the number in a int array and the operator name in a string array
+                        int[] count = new int[3];
+                        string[] operators = {"Vodafone", "MEO", "NOS"};
+                        while (await reader.ReadAsync())
+                        {
+                            if (reader["operador"].ToString() == operators[0])
+                            {
+                                count[0]++;
+                            }
+                            if (reader["operador"].ToString() == operators[1])
+                            {
+                                count[1]++;
+                            }
+                            if (reader["operador"].ToString() == operators[2])
+                            {
+                                count[2]++;
+                            }
+                        }
+                        //sends the coverages to the client
+                        int i = 0;
+                        foreach (string op in operators)
+                        {
+                            stringMaster += op + ": " + count[i] + "\n";
+                            i++;
+                        }
+                        await SendMessageAsync(client, stringMaster);
 
                     }
                     if (choice == 3)
                     {
                         Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") disconnected");
                         client.Close();
-                        
+
                         break;
                     }
                 }
@@ -135,6 +159,28 @@ namespace server
 
 
             Console.WriteLine($"File received and saved to files/{fileName}");
+        }
+
+        //thread to process the file (if the operator is the same, then wait for the other operator to finish)
+        private static async Task ProcessFileAsync(string fileName)
+        {
+            //wait for the other operator to finish
+            while (true)
+            {
+                if (File.Exists("files/" + fileName + ".processed"))
+                {
+                    break;
+                }
+                await Task.Delay(1000);
+            }
+
+            //process the file
+            Console.WriteLine($"Processing file {fileName}...");
+            await Task.Delay(5000);
+            Console.WriteLine($"File {fileName} processed");
+
+            //delete the file
+            File.Delete("files/" + fileName + ".processed");
         }
     }
 }
