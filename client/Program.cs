@@ -43,6 +43,7 @@ namespace client
                         case "2":
                             Console.Clear();
                             await SendMessageAsync(client, "2");
+                            Console.WriteLine(await ReceiveMessageAsync(client));
                             break;
                         case "3":
                             Console.Clear();
