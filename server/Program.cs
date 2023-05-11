@@ -9,8 +9,14 @@ namespace server
 {
     class Program
     {
+        static string[] operators = { "Vodafone", "MEO", "NOS" };
+        // Create a new Mutex. The creating thread does not own the mutex.
+        private static Mutex mut = new Mutex();
+        //create number threads as much as the number of operators
+        private static int numThreads = operators.Length;
         static async Task Main(string[] args)
         {
+
             // Connect to the database
             string connectionString = "Server=localhost\\SQLEXPRESS;Database=master;Trusted_Connection=True;";
             using SqlConnection connection = new SqlConnection(connectionString);
@@ -49,6 +55,9 @@ namespace server
                 //gets the reference to the network stream
                 NetworkStream stream = client.GetStream();
 
+                //gets the client operator
+                string clientOperator = await ReceiveMessageAsync(client);
+
                 while (true)
                 {
                     int choice = int.Parse(await ReceiveMessageAsync(client));
@@ -56,6 +65,7 @@ namespace server
                     if (choice == 1)
                     {
                         await ReceiveFileAsync(client);
+                        await ProcessFileAsync(clientOperator, connection);
                     }
                     if (choice == 2)
                     {
@@ -66,7 +76,6 @@ namespace server
                         string stringMaster = "";
                         //counts the coverages from the different operators and stores the number in a int array and the operator name in a string array
                         int[] count = new int[3];
-                        string[] operators = {"Vodafone", "MEO", "NOS"};
                         while (await reader.ReadAsync())
                         {
                             if (reader["operador"].ToString() == operators[0])
@@ -162,25 +171,9 @@ namespace server
         }
 
         //thread to process the file (if the operator is the same, then wait for the other operator to finish)
-        private static async Task ProcessFileAsync(string fileName)
+        private static async Task ProcessFileAsync(string operador, SqlConnection connection)
         {
-            //wait for the other operator to finish
-            while (true)
-            {
-                if (File.Exists("files/" + fileName + ".processed"))
-                {
-                    break;
-                }
-                await Task.Delay(1000);
-            }
-
-            //process the file
-            Console.WriteLine($"Processing file {fileName}...");
-            await Task.Delay(5000);
-            Console.WriteLine($"File {fileName} processed");
-
-            //delete the file
-            File.Delete("files/" + fileName + ".processed");
+        
         }
     }
 }
