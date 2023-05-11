@@ -27,6 +27,9 @@ namespace client
                 //receive the "100 OK" message from the server
                 Console.WriteLine(await ReceiveMessageAsync(client));
 
+                Console.WriteLine("Enter your operator:");
+                string clientOperator = Console.ReadLine() ?? "";
+                await SendMessageAsync(client, clientOperator);
                 //handles user input
                 while (true)
                 {
