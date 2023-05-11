@@ -11,6 +11,16 @@ namespace server
     {
         static async Task Main(string[] args)
         {
+            // Connect to the database
+            string connectionString = "Server=localhost\\SQLEXPRESS;Database=master;Trusted_Connection=True;";
+            using SqlConnection connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            //creates a table called "coverages" with id,name and description columns
+            string sql = "CREATE IF NOT EXIST TABLE coverages (id INT IDENTITY(1,1) PRIMARY KEY, name VARCHAR(255), description VARCHAR(255))";
+            using SqlCommand command = new SqlCommand(sql, connection);
+            await command.ExecuteNonQueryAsync();
+                        
             //ip and port information
             IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
             int port = 5000;
@@ -31,6 +41,9 @@ namespace server
 
                 //handle client in separate task
                 _ = Task.Run(() => HandleClientAsync(client));
+
+                //closes connection to the database
+                connection.Close();
             }
         }
 
@@ -45,13 +58,21 @@ namespace server
                 {
                     int choice = int.Parse(await ReceiveMessageAsync(client));
                     Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") sent: " + choice);
-                    if (choice == 1){
+                    if (choice == 1)
+                    {
                         await ReceiveFileAsync(client);
+                    }
+                    if (choice == 2)
+                    {
+                        //Get the data from the table "coverage" in the database
+                        
+
                     }
                     if (choice == 3)
                     {
                         Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") disconnected");
                         client.Close();
+                        
                         break;
                     }
                 }
