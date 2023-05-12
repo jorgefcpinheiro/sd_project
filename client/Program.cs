@@ -41,7 +41,8 @@ namespace client
                         case "1":
                             Console.Clear();
                             await SendMessageAsync(client, "1");
-                            await SendFileAsync(client, "./files/example.txt");
+                            await SendFileAsync(client, "./files/" + clientOperator + ".csv");
+                            Console.WriteLine("File sent successfully");
                             break;
                         case "2":
                             Console.Clear();
