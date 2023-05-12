@@ -9,11 +9,6 @@ namespace server
 {
     class Program
     {
-        static string[] operators = { "Vodafone", "MEO", "NOS" };
-        // Create a new Mutex. The creating thread does not own the mutex.
-        private static Mutex mut = new Mutex();
-        //create number threads as much as the number of operators
-        private static int numThreads = operators.Length;
         static async Task Main(string[] args)
         {
 
@@ -57,15 +52,16 @@ namespace server
 
                 //gets the client operator
                 string clientOperator = await ReceiveMessageAsync(client);
-
+                Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") is from the operator " + clientOperator);
                 while (true)
                 {
                     int choice = int.Parse(await ReceiveMessageAsync(client));
-                    Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") sent: " + choice);
                     if (choice == 1)
                     {
                         await ReceiveFileAsync(client);
+                        Console.WriteLine("File received from " + clientOperator);
                         await ProcessFileAsync(clientOperator, connection);
+                        Console.WriteLine("File processed");
                     }
                     if (choice == 2)
                     {
@@ -76,6 +72,7 @@ namespace server
                         string stringMaster = "";
                         //counts the coverages from the different operators and stores the number in a int array and the operator name in a string array
                         int[] count = new int[3];
+                        string[] operators = { "Vodafone", "NOS", "MEO" };
                         while (await reader.ReadAsync())
                         {
                             if (reader["operador"].ToString() == operators[0])
@@ -99,13 +96,13 @@ namespace server
                             i++;
                         }
                         await SendMessageAsync(client, stringMaster);
+                        Console.WriteLine("Coverages sent to " + client.Client.RemoteEndPoint);
 
                     }
                     if (choice == 3)
                     {
                         Console.WriteLine("Client(" + client.Client.RemoteEndPoint + ") disconnected");
                         client.Close();
-
                         break;
                     }
                 }
@@ -170,10 +167,44 @@ namespace server
             Console.WriteLine($"File received and saved to files/{fileName}");
         }
 
-        //thread to process the file (if the operator is the same, then wait for the other operator to finish)
+        //process the file 
         private static async Task ProcessFileAsync(string operador, SqlConnection connection)
         {
-        
+            string sqlProcess = $"INSERT INTO process (operador, nomeFile, estado) VALUES ('{operador}', 'files/{operador}.csv', 'OPEN')";
+            using SqlCommand commandProcess = new SqlCommand(sqlProcess, connection);
+            await commandProcess.ExecuteNonQueryAsync();
+            try
+            {
+                //read the csv file with the name of the operator and store the data in the database
+                string[] lines = File.ReadAllLines("files/" + operador + ".csv");
+                foreach (string line in lines)
+                {
+                    string[] data = line.Split(',');
+                    if (data.Length >= 3)
+                    {
+                        string sql = $"INSERT INTO coverages (operador, rua, numero_porta) VALUES ('{data[0]}', '{data[1]}', '{data[2]}')";
+                        using SqlCommand command = new SqlCommand(sql, connection);
+                        await command.ExecuteNonQueryAsync();
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error processing line '{line}': not enough data");
+                    }
+                }
+                //change the state of the last sql entry where the operator is the same as the file name
+                string sqlConcluded = $"UPDATE process SET estado = 'CONCLUDED' WHERE id = (SELECT MAX(id) FROM process WHERE operador = '{operador}')";
+                using SqlCommand commandConcluded = new SqlCommand(sqlConcluded, connection);
+                await commandConcluded.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error processing file: " + ex.Message);
+                //change the state of the last sql entry where the operator is the same as the file name
+                string sqlError = $"UPDATE process SET estado = 'ERROR' WHERE id = (SELECT MAX(id) FROM process WHERE operador = '{operador}')";
+                using SqlCommand commandError = new SqlCommand(sqlError, connection);
+                await commandError.ExecuteNonQueryAsync();
+            }
         }
+
     }
 }
