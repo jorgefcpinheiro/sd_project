@@ -170,6 +170,10 @@ namespace server
         //process the file 
         private static async Task ProcessFileAsync(string operador, SqlConnection connection)
         {
+            //deletes all the entrys of the operator
+            string sqlDelete = $"DELETE FROM coverages WHERE operador = '{operador}'";
+            using SqlCommand commandDelete = new SqlCommand(sqlDelete, connection);
+            await commandDelete.ExecuteNonQueryAsync();
             string sqlProcess = $"INSERT INTO process (operador, nomeFile, estado) VALUES ('{operador}', 'files/{operador}.csv', 'OPEN')";
             using SqlCommand commandProcess = new SqlCommand(sqlProcess, connection);
             await commandProcess.ExecuteNonQueryAsync();
