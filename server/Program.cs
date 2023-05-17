@@ -88,6 +88,8 @@ namespace server
                                 count[2]++;
                             }
                         }
+                        //closes the reader
+                        await reader.CloseAsync();
                         //sends the coverages to the client
                         int i = 0;
                         foreach (string op in operators)
@@ -95,6 +97,18 @@ namespace server
                             stringMaster += op + ": " + count[i] + "\n";
                             i++;
                         }
+                        //show the streets where the coverage is more than one operator
+                        string sqlStreets = "SELECT rua FROM coverages GROUP BY rua HAVING COUNT(*) > 1";
+                        using SqlCommand commandStreets = new SqlCommand(sqlStreets, connection);
+                        using SqlDataReader readerStreets = await commandStreets.ExecuteReaderAsync();
+                        stringMaster += "\nStreets with more than one operador:\n";
+                        //add the streets names to the string with the operators names
+                        while (await readerStreets.ReadAsync())
+                        {
+                            stringMaster += readerStreets["rua"].ToString() + "\n";
+                        }
+                        //closes the reader
+                        await readerStreets.CloseAsync();
                         await SendMessageAsync(client, stringMaster);
                         Console.WriteLine("Coverages sent to " + client.Client.RemoteEndPoint);
 
